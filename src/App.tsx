@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { SomoHeroCanvas } from './components/SomoHeroCanvas';
 
+const WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIYyQj6gEzVm5s4l1Sp3_MdsUtCXuY5ME-6_st3cQpJ5qxa4t2nyUxwmdk0gwT_IU1/exec';
+
 const PRESENCE_STATES = [
   { id: 'rest', emotion: 'comfort', duration: 0 },
   { id: 'listening', emotion: 'surprised', duration: 5000 },
@@ -14,6 +16,8 @@ export const App: React.FC = () => {
   const [mouseSpotlight, setMouseSpotlight] = useState({ x: 68, y: 38 });
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   // Stay at rest until an interaction starts the listening → thinking → happy sequence.
   useEffect(() => {
@@ -35,12 +39,34 @@ export const App: React.FC = () => {
     setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
   };
 
-  const handleWaitlistSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleWaitlistSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (!email.trim()) return;
-    setPresenceIndex(3);
-    setSubmitted(true);
-    setEmail('');
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || submitting) return;
+
+    setSubmitting(true);
+    setSubmitError('');
+    try {
+      const body = new URLSearchParams({ email: normalizedEmail });
+      const response = await fetch(WAITLIST_ENDPOINT, {
+        method: 'POST',
+        mode: 'cors',
+        credentials: 'omit',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+        body,
+      });
+      // Confirm persistence only when the script explicitly reports success.
+      if (!response.ok || (await response.text()).trim() !== 'OK') {
+        throw new Error('Waitlist submission was not confirmed');
+      }
+      setPresenceIndex(3);
+      setSubmitted(true);
+      setEmail('');
+    } catch {
+      setSubmitError('Couldn’t confirm your signup. Please try again later.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -58,7 +84,7 @@ export const App: React.FC = () => {
         >
           {/* Minimal Brand Lockup */}
           <header className="nexbot-minimal-header">
-            <img src="/somo-logo-light.png" alt="somo logo" className="brand-logo" />
+            <img src={`${import.meta.env.BASE_URL}somo-logo-light.png`} alt="somo logo" className="brand-logo" />
             <span className="brand-company">somo</span>
           </header>
 
@@ -108,8 +134,10 @@ export const App: React.FC = () => {
 
               {submitted ? (
                 <div className="waitlist-confirm" role="status">
-                  <span className="waitlist-dot" />
-                  <span>On waitlist</span>
+                  <span className="waitlist-confirm-mark" aria-hidden="true">✓</span>
+                  <span className="waitlist-confirm-copy">
+                    <strong>You’re in ✨</strong>
+                  </span>
                 </div>
               ) : (
                 <form className="waitlist-form" onSubmit={handleWaitlistSubmit}>
@@ -122,11 +150,12 @@ export const App: React.FC = () => {
                     aria-label="Email"
                     className="waitlist-input"
                   />
-                  <button type="submit" className="waitlist-button">
-                    Waitlist
+                  <button type="submit" className="waitlist-button" disabled={submitting}>
+                    {submitting ? 'Joining…' : 'Waitlist'}
                   </button>
                 </form>
               )}
+              {submitError && <p className="waitlist-error" role="alert">{submitError}</p>}
             </div>
 
             <div className="nexbot-canvas-col">

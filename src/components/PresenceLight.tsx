@@ -23,6 +23,7 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
     uIntensity: { value: 0 },
     uShimmer: { value: 0 },
     uHalo: { value: 1 },
+    uBreathScale: { value: 1 },
     uTime: { value: 0 },
   }), []);
 
@@ -54,14 +55,16 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
     let intensity = 0.72;
     let shimmer = 0;
     let halo = 1;
+    let breathScale = 1;
     if (!reducedMotion.current) {
+      // Smooth six-second inhale/exhale shared by the core and halo.
+      const breath = 0.5 - 0.5 * Math.cos(t * Math.PI * 2 / 6);
+      breathScale = 0.94 + breath * 0.12;
       switch (active.current) {
         case 'rest': {
-          // Almost-still breathing: a small change in light, not a pulsing indicator.
-          const breath = 0.5 - 0.5 * Math.cos(t * Math.PI * 2 / 10);
-          intensity = 0.76 + breath * 0.045;
-          radius = 0.175 + breath * 0.003;
-          halo = 0.95 + breath * 0.1;
+          intensity = 0.52 + breath * 0.38;
+          breathScale = 0.90 + breath * 0.20;
+          halo = 0.92 + breath * 0.18;
           break;
         }
         case 'listening': {
@@ -91,6 +94,7 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
     uniforms.uIntensity.value = intensity * visibility.current;
     uniforms.uShimmer.value = shimmer;
     uniforms.uHalo.value = halo;
+    uniforms.uBreathScale.value = breathScale;
     uniforms.uTime.value = t;
   });
 
@@ -111,11 +115,11 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
         `}
         fragmentShader={`
           uniform vec3 uColor;
-          uniform float uRadius, uIntensity, uShimmer, uHalo, uTime;
+          uniform float uRadius, uIntensity, uShimmer, uHalo, uTime, uBreathScale;
           varying vec2 vUv;
           void main() {
             // Circular in physical screen coordinates, with generous dark space around it.
-            vec2 p = (vUv - 0.5) * vec2(1.0, 4.4 / 5.4);
+            vec2 p = (vUv - 0.5) * vec2(1.0, 4.4 / 5.4) / uBreathScale;
             float d = length(p);
             float ringDistance = d - uRadius;
             // Layered diffusion softens the halo around the luminous center.

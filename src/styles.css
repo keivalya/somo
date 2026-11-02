@@ -273,14 +273,59 @@ body,
   pointer-events: auto;
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.54rem 1.05rem;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  gap: 0.72rem;
+  width: fit-content;
+  min-width: 220px;
+  padding: 0.72rem 1rem;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.025));
   border: 1px solid rgba(255, 255, 255, 0.12);
-  color: rgba(255, 255, 255, 0.88);
-  font-size: 0.82rem;
-  font-weight: 500;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16), inset 0 1px rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(18px);
+  color: var(--text-white);
+  animation: waitlist-arrive 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.waitlist-confirm-mark {
+  display: grid;
+  place-items: center;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: #17120a;
+  background: linear-gradient(145deg, #ffe4a1, #f5a623);
+  box-shadow: 0 0 22px rgba(245, 166, 35, 0.2);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.waitlist-confirm-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  text-align: left;
+}
+
+.waitlist-confirm-copy strong {
+  font-size: 0.94rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.waitlist-confirm-copy span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+@keyframes waitlist-arrive {
+  from { opacity: 0; transform: translateY(7px) scale(0.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .waitlist-confirm { animation: none; }
 }
 
 .waitlist-dot {
@@ -414,4 +459,15 @@ body,
     font-size: 0.76rem;
     padding: 0.48rem 0.9rem;
   }
+}
+
+.waitlist-button:disabled {
+  opacity: 0.68;
+  cursor: wait;
+}
+
+.waitlist-error {
+  margin: 0.65rem 0 0;
+  color: #ffb4a8;
+  font-size: 0.78rem;
 }

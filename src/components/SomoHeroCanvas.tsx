@@ -338,7 +338,7 @@ interface IroRobotModelProps {
   onCycleEmotion: () => void;
 }
 
-const GLB_URL = '/models/somo-assembly.glb?v=32';
+const GLB_URL = `${import.meta.env.BASE_URL}models/somo-assembly.glb?v=32`;
 
 const SpringCameraReturn: React.FC = () => {
   const controlsRef = useRef<any>(null);
