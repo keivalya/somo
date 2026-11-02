@@ -11,7 +11,7 @@ const COLORS: Record<PresenceState, string> = {
   happy: '#f5a623',
 };
 
-/** A single hue of diffused light, contained within the chest display. */
+/** A bright, diffused core and concentric halo beneath the chest glass. */
 export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => {
   const active = useRef(state);
   const elapsed = useRef(0);
@@ -19,9 +19,10 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
   const reducedMotion = useRef(false);
   const uniforms = useMemo(() => ({
     uColor: { value: new THREE.Color(COLORS[state]) },
-    uRadius: { value: 0.23 },
+    uRadius: { value: 0.175 },
     uIntensity: { value: 0 },
     uShimmer: { value: 0 },
+    uHalo: { value: 1 },
     uTime: { value: 0 },
   }), []);
 
@@ -49,32 +50,39 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
     }
 
     const t = elapsed.current;
-    let radius = 0.23;
-    let intensity = 0.48;
+    let radius = 0.175;
+    let intensity = 0.72;
     let shimmer = 0;
+    let halo = 1;
     if (!reducedMotion.current) {
       switch (active.current) {
         case 'rest': {
-          const breath = Math.sin(t * Math.PI * 2 / 9);
-          radius += breath * 0.008;
-          intensity += breath * 0.035;
+          // Almost-still breathing: a small change in light, not a pulsing indicator.
+          const breath = 0.5 - 0.5 * Math.cos(t * Math.PI * 2 / 10);
+          intensity = 0.76 + breath * 0.045;
+          radius = 0.175 + breath * 0.003;
+          halo = 0.95 + breath * 0.1;
           break;
         }
         case 'listening': {
-          const expansion = 1 - Math.exp(-t * 1.3);
-          radius = 0.18 + 0.14 * expansion;
-          intensity = 0.65;
+          // One deliberate opening gesture, followed by an attentive hold.
+          const progress = Math.min(t / 1.8, 1);
+          const ease = progress * progress * (3 - 2 * progress);
+          radius = 0.175 + 0.035 * ease;
+          intensity = 0.78;
+          halo = 1 + 0.2 * ease;
           break;
         }
         case 'thinking':
-          radius = 0.22;
-          intensity = 0.56 + Math.sin(t * 2.4) * 0.035;
-          shimmer = 0.1;
+          radius = 0.175;
+          intensity = 0.72;
+          shimmer = 0.12;
           break;
         case 'happy': {
           const delight = Math.sin(Math.min(t / 2.4, 1) * Math.PI) ** 2;
-          radius = 0.23 + delight * 0.08;
-          intensity = 0.48 + delight * 0.4;
+          radius = 0.175 + delight * 0.014;
+          intensity = 0.72 + delight * 0.22;
+          halo = 1 + delight * 0.5;
           break;
         }
       }
@@ -82,12 +90,13 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
     uniforms.uRadius.value = radius;
     uniforms.uIntensity.value = intensity * visibility.current;
     uniforms.uShimmer.value = shimmer;
+    uniforms.uHalo.value = halo;
     uniforms.uTime.value = t;
   });
 
   return (
     <mesh position={[0, 8.15, 12.19]} rotation={[-0.1877, 0, 0]}>
-      <planeGeometry args={[3.5, 3.5]} />
+      <planeGeometry args={[5.4, 4.4]} />
       <shaderMaterial
         uniforms={uniforms}
         transparent
@@ -102,15 +111,28 @@ export const PresenceLight: React.FC<{ state: PresenceState }> = ({ state }) => 
         `}
         fragmentShader={`
           uniform vec3 uColor;
-          uniform float uRadius, uIntensity, uShimmer, uTime;
+          uniform float uRadius, uIntensity, uShimmer, uHalo, uTime;
           varying vec2 vUv;
           void main() {
-            vec2 p = vUv - 0.5;
+            // Circular in physical screen coordinates, with generous dark space around it.
+            vec2 p = (vUv - 0.5) * vec2(1.0, 4.4 / 5.4);
             float d = length(p);
-            float glow = exp(-3.0 * d * d / (uRadius * uRadius));
-            float edge = 1.0 - smoothstep(0.38, 0.49, d);
-            float shimmer = 1.0 + uShimmer * sin(p.x * 22.0 + p.y * 12.0 - uTime * 2.0);
-            gl_FragColor = vec4(uColor, glow * edge * shimmer * uIntensity);
+            float ringDistance = d - uRadius;
+            // Layered diffusion softens the halo around the luminous center.
+            float rim = exp(-pow(ringDistance / 0.018, 2.0));
+            float bloom = exp(-pow(ringDistance / (0.052 * uHalo), 2.0));
+            float atmosphere = exp(-pow(d / 0.27, 4.0));
+            // A bright Gaussian core fades continuously, without a defined border.
+            float core = exp(-pow(d / 0.052, 2.0));
+            float coreGlow = exp(-pow(d / 0.088, 2.0));
+            // A fixed upper-left catchlight gives the halo depth. Thinking gently
+            // shifts its luminance without rotating, chasing, or adding particles.
+            float lighting = 0.79 + 0.21 * clamp((-p.x + p.y) / (uRadius * 1.42), -1.0, 1.0);
+            float shimmer = 1.0 + uShimmer * sin(uTime * 1.7 + p.y * 9.0);
+            float light = (rim * 0.52 + bloom * 0.25) * lighting * shimmer
+                        + atmosphere * 0.065 + core * 0.82 + coreGlow * 0.18;
+            float edge = 1.0 - smoothstep(0.32, 0.39, d);
+            gl_FragColor = vec4(uColor, light * edge * uIntensity);
             #include <colorspace_fragment>
           }
         `}

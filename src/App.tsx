@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { SomoHeroCanvas } from './components/SomoHeroCanvas';
 
 const PRESENCE_STATES = [
-  { id: 'rest', emotion: 'comfort', duration: 12000 },
+  { id: 'rest', emotion: 'comfort', duration: 0 },
   { id: 'listening', emotion: 'surprised', duration: 5000 },
   { id: 'thinking', emotion: 'thinking', duration: 6000 },
   { id: 'happy', emotion: 'shy', duration: 3000 },
@@ -15,13 +15,14 @@ export const App: React.FC = () => {
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  // Preview a calm interaction, leaving time for the resting pulse to breathe.
+  // Stay at rest until an interaction starts the listening → thinking → happy sequence.
   useEffect(() => {
+    if (presence.id === 'rest') return;
     const timer = window.setTimeout(() => {
       setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
     }, presence.duration);
     return () => window.clearTimeout(timer);
-  }, [presenceIndex, presence.duration]);
+  }, [presenceIndex, presence]);
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
   const handleWaitlistSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!email.trim()) return;
+    setPresenceIndex(3);
     setSubmitted(true);
     setEmail('');
   };
