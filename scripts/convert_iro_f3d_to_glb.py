@@ -1097,9 +1097,6 @@ def build_v24_face_Features_and_covers(
          covered with a dark backing disc + smoked translucent glass lens layer.
       3. v24 Center Circular Camera Opening (`Arducam_B0332`, `x = 0.0`, `z = 16.05`, `r = 0.72 cm`) between the eyes,
          with a sculpted cream bezel, dark inner barrel, and recessed black translucent smoked glass cover.
-      4. v24 Three Horizontal Pill-Shaped Microphone/Sensor Openings along the lower face (`z = 14.12`, height `0.48 cm`,
-         `r_end = 0.24 cm`, centered at `0°` and `±23.5°` under the camera and eyes), each with a recessed cream chamfer
-         bezel and covered by a recessed black translucent smoked-glass layer.
     """
     # 1. Inner dark cylindrical core shield (r = 5.85 cm, z = 11.50 .. 18.45) to block any view into the torso/head interior
     shield_pos = []
@@ -1247,23 +1244,6 @@ def build_v24_face_Features_and_covers(
     r_cam = 0.48
     cam_loop = [(r_cam * math.cos(2.0 * math.pi * k / n_cam), 16.05 + r_cam * math.sin(2.0 * math.pi * k / n_cam)) for k in range(n_cam)]
     add_cylindrical_recessed_feature(cam_loop, (0.0, 16.05), r_surf=7.98, bezel_width=0.07)
-
-    # 4. v24 Three Horizontal Pill-Shaped Microphone/Sensor Slots (`BREP.02790908`) at z = 13.55 on r_surf = 8.23
-    def make_pill_loop(cx_arc: float, cz: float, half_span: float = 0.72, r_pill: float = 0.22, n_cap: int = 12):
-        pts = []
-        # Right semicircular cap (-pi/2 -> +pi/2)
-        for k in range(n_cap + 1):
-            ang = -0.5 * math.pi + math.pi * (k / n_cap)
-            pts.append((cx_arc + half_span + r_pill * math.cos(ang), cz + r_pill * math.sin(ang)))
-        # Left semicircular cap (+pi/2 -> +3pi/2)
-        for k in range(n_cap + 1):
-            ang = 0.5 * math.pi + math.pi * (k / n_cap)
-            pts.append((cx_arc - half_span + r_pill * math.cos(ang), cz + r_pill * math.sin(ang)))
-        return pts
-
-    for slot_cx in (-2.75, 0.0, 2.75):
-        pill_loop = make_pill_loop(slot_cx, 13.55, half_span=0.72, r_pill=0.22)
-        add_cylindrical_recessed_feature(pill_loop, (slot_cx, 13.55), r_surf=8.23, bezel_width=0.06)
 
     neck_prims.append({"mat_idx": mat_cream, "positions": bezel_cream_pos, "normals": bezel_cream_norm, "indices": bezel_cream_idx})
     neck_prims.append({"mat_idx": mat_seam, "positions": wall_dark_pos, "normals": wall_dark_norm, "indices": wall_dark_idx})
