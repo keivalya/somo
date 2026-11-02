@@ -10,6 +10,7 @@ import {
   useGLTF,
 } from '@react-three/drei';
 import * as THREE from 'three';
+import { PresenceLight, PresenceState } from './PresenceLight';
 
 export type IroEmotion = 'comfort' | 'shy' | 'surprised' | 'thinking' | 'confused' | 'angry';
 
@@ -46,47 +47,47 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
     headRoll: 0.0,
     left: {
       cx: 0,
-      cy: -2,
-      r: 56,
-      topClipOffset: -68,
+      cy: -4,
+      r: 72,
+      topClipOffset: -86,
       topClipAngle: 0,
-      bottomArchOffset: 112,
+      bottomArchOffset: 102,
       blush: 0,
       brightness: 1.0,
     },
     right: {
       cx: 0,
-      cy: -2,
-      r: 56,
-      topClipOffset: -68,
+      cy: -4,
+      r: 72,
+      topClipOffset: -86,
       topClipAngle: 0,
-      bottomArchOffset: 112,
+      bottomArchOffset: 102,
       blush: 0,
       brightness: 1.0,
     },
   },
   shy: {
-    headLift: 5.15,
-    headPitch: 0.09,
-    headYaw: -0.06,
-    headRoll: 0.05,
+    headLift: 5.2,
+    headPitch: 0.07,
+    headYaw: -0.05,
+    headRoll: 0.06,
     left: {
-      cx: 0,
-      cy: -6,
-      r: 55,
-      topClipOffset: -68,
+      cx: -4,
+      cy: -12,
+      r: 68,
+      topClipOffset: -86,
       topClipAngle: 0,
-      bottomArchOffset: 94,
+      bottomArchOffset: 76,
       blush: 1.0,
       brightness: 1.0,
     },
     right: {
-      cx: 0,
-      cy: -6,
-      r: 55,
-      topClipOffset: -68,
+      cx: -4,
+      cy: -12,
+      r: 68,
+      topClipOffset: -86,
       topClipAngle: 0,
-      bottomArchOffset: 94,
+      bottomArchOffset: 76,
       blush: 1.0,
       brightness: 1.0,
     },
@@ -99,20 +100,20 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
     left: {
       cx: 0,
       cy: 0,
-      r: 58,
-      topClipOffset: -72,
+      r: 78,
+      topClipOffset: -94,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
     right: {
       cx: 0,
       cy: 0,
-      r: 58,
-      topClipOffset: -72,
+      r: 78,
+      topClipOffset: -94,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
@@ -123,24 +124,24 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
     headYaw: 0.12,
     headRoll: -0.04,
     left: {
-      cx: 20,
-      cy: 4,
-      r: 56,
-      topClipOffset: -28,
+      cx: 24,
+      cy: 6,
+      r: 72,
+      topClipOffset: -34,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
-      brightness: 0.98,
+      brightness: 1.0,
     },
     right: {
-      cx: 20,
-      cy: 4,
-      r: 56,
-      topClipOffset: -28,
+      cx: 24,
+      cy: 6,
+      r: 72,
+      topClipOffset: -34,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
-      brightness: 0.98,
+      brightness: 1.0,
     },
   },
   confused: {
@@ -151,20 +152,20 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
     left: {
       cx: 0,
       cy: 0,
-      r: 57,
-      topClipOffset: -46,
+      r: 74,
+      topClipOffset: -54,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
     right: {
       cx: 0,
-      cy: 6,
-      r: 55,
+      cy: 8,
+      r: 70,
       topClipOffset: -2,
       topClipAngle: 0,
-      bottomArchOffset: 145,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
@@ -175,22 +176,22 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
     headYaw: 0.0,
     headRoll: 0.0,
     left: {
-      cx: 5,
-      cy: 8,
-      r: 56,
-      topClipOffset: -14,
-      topClipAngle: 0.42,
-      bottomArchOffset: 145,
+      cx: 6,
+      cy: 10,
+      r: 72,
+      topClipOffset: -16,
+      topClipAngle: 0.45,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
     right: {
-      cx: -5,
-      cy: 8,
-      r: 56,
-      topClipOffset: -14,
-      topClipAngle: -0.42,
-      bottomArchOffset: 145,
+      cx: -6,
+      cy: 10,
+      r: 72,
+      topClipOffset: -16,
+      topClipAngle: -0.45,
+      bottomArchOffset: 175,
       blush: 0,
       brightness: 1.0,
     },
@@ -254,8 +255,8 @@ function drawSingleCircularEye(
   ctx.fillRect(ex - r - 4, ey - r - 4, (r + 4) * 2, (r + 4) * 2);
 
   // Carve out the lower concave eyelid arch if active (e.g. 'comfort' and 'shy')
-  if (state.bottomArchOffset < 135) {
-    const archRadius = 76;
+  if (state.bottomArchOffset < 155) {
+    const archRadius = 86;
     const archY = ey + state.bottomArchOffset;
     ctx.fillStyle = '#040406';
     ctx.beginPath();
@@ -267,13 +268,13 @@ function drawSingleCircularEye(
   // Subtle soft glow ring around the eye
   ctx.save();
   ctx.globalCompositeOperation = 'screen';
-  const haloGrad = ctx.createRadialGradient(ex, ey, r * 0.72, ex, ey, r * 1.24);
-  haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.14)');
-  haloGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.06)');
+  const haloGrad = ctx.createRadialGradient(ex, ey, r * 0.68, ex, ey, r * 1.28);
+  haloGrad.addColorStop(0, 'rgba(255, 255, 255, 0.24)');
+  haloGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.1)');
   haloGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
   ctx.fillStyle = haloGrad;
   ctx.beginPath();
-  ctx.arc(ex, ey, r * 1.24, 0, Math.PI * 2);
+  ctx.arc(ex, ey, r * 1.28, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -289,8 +290,8 @@ function drawSingleCircularEye(
   ctx.fillRect(-200, -200, 400, 202);
   ctx.restore();
 
-  if (state.bottomArchOffset < 135) {
-    const archRadius = 75;
+  if (state.bottomArchOffset < 155) {
+    const archRadius = 85;
     const archY = ey + state.bottomArchOffset;
     ctx.save();
     ctx.fillStyle = '#040406';
@@ -300,20 +301,20 @@ function drawSingleCircularEye(
     ctx.restore();
   }
 
-  // Pink blush oval below the eye (used in 'shy' emotion, matching reference sheet)
+  // Soft pastel-pink cheek blush blob tucked under the smiling eye arch (used in 'shy' emotion)
   if (state.blush > 0.01) {
     ctx.save();
-    const bx = centerX + state.cx * 0.3 + gazeX * 0.35;
-    const by = centerY + 56;
+    const bx = ex;
+    const by = ey + 52;
     ctx.translate(bx, by);
-    ctx.scale(2.4, 0.95);
-    const blushGrad = ctx.createRadialGradient(0, 0, 1, 0, 0, 14);
-    blushGrad.addColorStop(0, `rgba(244, 96, 126, ${0.88 * state.blush})`);
-    blushGrad.addColorStop(0.55, `rgba(225, 72, 104, ${0.48 * state.blush})`);
-    blushGrad.addColorStop(1, 'rgba(225, 72, 104, 0)');
+    ctx.scale(2.15, 0.92);
+    const blushGrad = ctx.createRadialGradient(0, 0, 0, 0, 0, 20);
+    blushGrad.addColorStop(0, `rgba(255, 198, 224, ${0.46 * state.blush})`);
+    blushGrad.addColorStop(0.5, `rgba(248, 174, 210, ${0.22 * state.blush})`);
+    blushGrad.addColorStop(1, 'rgba(248, 174, 210, 0)');
     ctx.fillStyle = blushGrad;
     ctx.beginPath();
-    ctx.arc(0, 0, 14, 0, Math.PI * 2);
+    ctx.arc(0, 0, 20, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
@@ -333,12 +334,83 @@ const INTERNAL_HIDDEN_NODES = new Set([
 
 interface IroRobotModelProps {
   emotion: IroEmotion;
+  presence: PresenceState;
   onCycleEmotion: () => void;
 }
 
-const GLB_URL = '/models/somo-assembly.glb?v=28';
+const GLB_URL = '/models/somo-assembly.glb?v=32';
 
-const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, onCycleEmotion }) => {
+const SpringCameraReturn: React.FC = () => {
+  const controlsRef = useRef<any>(null);
+  const isDraggingRef = useRef(false);
+  const springVelRef = useRef({ azim: 0, polar: 0 });
+
+  // Default camera spherical angles matching position={[0, 0.35, 6.8]} -> azim = 0, polar = 1.5194
+  const TARGET_AZIM = 0.0;
+  const TARGET_POLAR = Math.acos(0.35 / Math.hypot(0.35, 6.8));
+
+  useFrame((_, delta) => {
+    const ctrl = controlsRef.current;
+    if (!ctrl || isDraggingRef.current) {
+      springVelRef.current.azim = 0;
+      springVelRef.current.polar = 0;
+      return;
+    }
+
+    const dt = Math.min(delta, 0.05);
+    const curAzim = ctrl.getAzimuthalAngle();
+    const curPolar = ctrl.getPolarAngle();
+
+    // Shortest angular difference to front-facing target azimuth
+    let diffAzim = TARGET_AZIM - curAzim;
+    diffAzim = Math.atan2(Math.sin(diffAzim), Math.cos(diffAzim));
+    const diffPolar = TARGET_POLAR - curPolar;
+
+    if (
+      Math.abs(diffAzim) > 0.0005 ||
+      Math.abs(diffPolar) > 0.0005 ||
+      Math.abs(springVelRef.current.azim) > 0.0005 ||
+      Math.abs(springVelRef.current.polar) > 0.0005
+    ) {
+      // Spring-damper physics (snappy spring-back with slight natural elastic settle)
+      const stiffness = 24.0;
+      const damping = 6.2;
+
+      springVelRef.current.azim += (diffAzim * stiffness - springVelRef.current.azim * damping) * dt;
+      springVelRef.current.polar += (diffPolar * stiffness - springVelRef.current.polar * damping) * dt;
+
+      ctrl.setAzimuthalAngle(curAzim + springVelRef.current.azim * dt);
+      ctrl.setPolarAngle(
+        THREE.MathUtils.clamp(
+          curPolar + springVelRef.current.polar * dt,
+          Math.PI / 6,
+          Math.PI / 1.85
+        )
+      );
+      ctrl.update();
+    }
+  });
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      target={[0, 0, 0]}
+      enableZoom={false}
+      enablePan={false}
+      enableDamping={false}
+      minPolarAngle={Math.PI / 6}
+      maxPolarAngle={Math.PI / 1.85}
+      onStart={() => {
+        isDraggingRef.current = true;
+      }}
+      onEnd={() => {
+        isDraggingRef.current = false;
+      }}
+    />
+  );
+};
+
+const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, presence, onCycleEmotion }) => {
   const gltf = useGLTF(GLB_URL);
   const { size } = useThree();
   const isStacked = size.width < 900 || size.height > size.width;
@@ -404,7 +476,12 @@ const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, onCycleEmotion }
         }
         const existing = list.find((n) => n.name === nodeName);
         const stdMat = (obj.material as THREE.MeshStandardMaterial).clone();
-        if (stdMat.transparent || stdMat.opacity < 0.999) {
+        if (nodeName === 'Screen_Chest_TFT') {
+          stdMat.color.set('#050608');
+          stdMat.roughness = 0.12;
+          stdMat.metalness = 0.15;
+          stdMat.envMapIntensity = 1.4;
+        } else if (stdMat.transparent || stdMat.opacity < 0.999) {
           stdMat.transparent = true;
           stdMat.roughness = 0.1;
           stdMat.metalness = 0.2;
@@ -532,22 +609,26 @@ const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, onCycleEmotion }
             <group position={[0, -16.5, 0]}>
               {headNodes.map(renderNode)}
 
-              {/* Left Circular GC9A01 Eye Display (inside face 49 circular barrel) */}
-              <mesh position={[-2.528, 16.155, 6.42]} rotation={[0, -0.0873, 0]}>
-                <circleGeometry args={[1.26, 64]} />
+              {/* Left Circular GC9A01 Eye Display (orthogonal to face 49 cylinder axis: rotation.y = +0.0873) */}
+              <mesh position={[-2.584, 16.155, 6.82]} rotation={[0, 0.0873, 0]}>
+                <circleGeometry args={[1.24, 64]} />
                 <meshBasicMaterial map={eyeResources.leftTex} toneMapped={false} />
               </mesh>
 
-              {/* Right Circular GC9A01 Eye Display (inside face 46 circular barrel) */}
-              <mesh position={[2.514, 16.155, 6.42]} rotation={[0, 0.0873, 0]}>
-                <circleGeometry args={[1.26, 64]} />
+              {/* Right Circular GC9A01 Eye Display (orthogonal to face 46 cylinder axis: rotation.y = -0.0873) */}
+              <mesh position={[2.571, 16.155, 6.82]} rotation={[0, -0.0873, 0]}>
+                <circleGeometry args={[1.24, 64]} />
                 <meshBasicMaterial map={eyeResources.rightTex} toneMapped={false} />
               </mesh>
             </group>
           </group>
         </group>
 
-        <group>{bodyNodes.map(renderNode)}</group>
+        <group>
+          {bodyNodes.map(renderNode)}
+
+          <PresenceLight state={presence} />
+        </group>
       </group>
     </group>
   );
@@ -555,10 +636,11 @@ const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, onCycleEmotion }
 
 interface SomoHeroCanvasProps {
   emotion: IroEmotion;
+  presence: PresenceState;
   onCycleEmotion: () => void;
 }
 
-export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, onCycleEmotion }) => {
+export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, presence, onCycleEmotion }) => {
   return (
     <div className="hero-3d-canvas-wrap">
       <Canvas
@@ -598,7 +680,7 @@ export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, onCycle
         >
           <Environment preset="city" />
           <Float speed={1.1} rotationIntensity={0.025} floatIntensity={0.07}>
-            <IroRobotModel emotion={emotion} onCycleEmotion={onCycleEmotion} />
+            <IroRobotModel emotion={emotion} presence={presence} onCycleEmotion={onCycleEmotion} />
           </Float>
 
           <ContactShadows
@@ -611,13 +693,7 @@ export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, onCycle
           />
         </Suspense>
 
-        <OrbitControls
-          target={[0, 0, 0]}
-          enableZoom={false}
-          enablePan={false}
-          minPolarAngle={Math.PI / 6}
-          maxPolarAngle={Math.PI / 1.85}
-        />
+        <SpringCameraReturn />
       </Canvas>
     </div>
   );

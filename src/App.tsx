@@ -1,31 +1,27 @@
 import React, { useEffect, useState } from 'react';
-import { SomoHeroCanvas, IroEmotion } from './components/SomoHeroCanvas';
+import { SomoHeroCanvas } from './components/SomoHeroCanvas';
 
-const EMOTIONS: { id: IroEmotion; label: string }[] = [
-  { id: 'comfort', label: 'Comfort' },
-  { id: 'shy', label: 'Shy' },
-  { id: 'surprised', label: 'Surprised' },
-  { id: 'thinking', label: 'Thinking' },
-  { id: 'confused', label: 'Confused' },
-  { id: 'angry', label: 'Angry' },
-];
+const PRESENCE_STATES = [
+  { id: 'rest', emotion: 'comfort', duration: 12000 },
+  { id: 'listening', emotion: 'surprised', duration: 5000 },
+  { id: 'thinking', emotion: 'thinking', duration: 6000 },
+  { id: 'happy', emotion: 'shy', duration: 3000 },
+] as const;
 
 export const App: React.FC = () => {
-  const [emotion, setEmotion] = useState<IroEmotion>('comfort');
+  const [presenceIndex, setPresenceIndex] = useState(0);
+  const presence = PRESENCE_STATES[presenceIndex];
   const [mouseSpotlight, setMouseSpotlight] = useState({ x: 68, y: 38 });
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
 
-  // Autonomously rotate through emotions on a steady rhythm so iro feels alive
+  // Preview a calm interaction, leaving time for the resting pulse to breathe.
   useEffect(() => {
-    const timer = window.setInterval(() => {
-      setEmotion((prev) => {
-        const idx = EMOTIONS.findIndex((item) => item.id === prev);
-        return EMOTIONS[(idx + 1) % EMOTIONS.length].id;
-      });
-    }, 3200);
-    return () => window.clearInterval(timer);
-  }, []);
+    const timer = window.setTimeout(() => {
+      setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
+    }, presence.duration);
+    return () => window.clearTimeout(timer);
+  }, [presenceIndex, presence.duration]);
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
@@ -35,10 +31,7 @@ export const App: React.FC = () => {
   };
 
   const handleCycleEmotion = () => {
-    setEmotion((prev) => {
-      const idx = EMOTIONS.findIndex((item) => item.id === prev);
-      return EMOTIONS[(idx + 1) % EMOTIONS.length].id;
-    });
+    setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
   };
 
   const handleWaitlistSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -63,6 +56,7 @@ export const App: React.FC = () => {
         >
           {/* Minimal Brand Lockup */}
           <header className="nexbot-minimal-header">
+            <img src="/somo-logo-light.png" alt="somo logo" className="brand-logo" />
             <span className="brand-company">somo</span>
           </header>
 
@@ -103,7 +97,12 @@ export const App: React.FC = () => {
 
           <div className="nexbot-hero-grid">
             <div className="nexbot-copy-col">
-              <h1 className="nexbot-headline">iro</h1>
+              <div className="nexbot-title-block">
+                <h1 className="nexbot-headline">iro</h1>
+                <p className="nexbot-tagline">
+                  home robot with <span className="tagline-highlight">emotional intelligence</span>
+                </p>
+              </div>
 
               {submitted ? (
                 <div className="waitlist-confirm" role="status">
@@ -129,7 +128,7 @@ export const App: React.FC = () => {
             </div>
 
             <div className="nexbot-canvas-col">
-              <SomoHeroCanvas emotion={emotion} onCycleEmotion={handleCycleEmotion} />
+              <SomoHeroCanvas emotion={presence.emotion} presence={presence.id} onCycleEmotion={handleCycleEmotion} />
             </div>
           </div>
         </section>

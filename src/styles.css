@@ -86,7 +86,17 @@ body,
   top: 2rem;
   left: 2.5rem;
   z-index: 20;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
   pointer-events: none;
+}
+
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+  display: block;
 }
 
 .brand-company {
@@ -95,7 +105,7 @@ body,
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: lowercase;
-  color: rgba(255, 255, 255, 0.72);
+  color: rgba(255, 255, 255, 0.78);
 }
 
 /* ==========================================================================
@@ -153,6 +163,13 @@ body,
   pointer-events: none;
 }
 
+.nexbot-title-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
 .nexbot-headline {
   display: inline-block;
   font-family: var(--font-display);
@@ -163,6 +180,27 @@ body,
   padding-right: 0.12em;
   padding-bottom: 0.04em;
   background: linear-gradient(180deg, #ffffff 0%, #f4f4f5 52%, #71717a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.nexbot-tagline {
+  font-family: var(--font-sans);
+  font-size: clamp(0.84rem, 1.15vw, 0.96rem);
+  font-weight: 400;
+  letter-spacing: 0.015em;
+  color: rgba(255, 255, 255, 0.44);
+  line-height: 1.45;
+}
+
+.tagline-highlight {
+  font-family: 'Instrument Serif', Georgia, serif;
+  font-style: italic;
+  font-size: 1.14em;
+  font-weight: 400;
+  letter-spacing: 0.01em;
+  background: linear-gradient(90deg, #fff7ed 0%, #fcd34d 55%, #f5a623 100%);
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
@@ -328,6 +366,10 @@ body,
     align-items: center;
     text-align: center;
     gap: 0.75rem;
+  }
+
+  .nexbot-title-block {
+    align-items: center;
   }
 
   .nexbot-headline {

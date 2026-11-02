@@ -1120,50 +1120,31 @@ def build_v24_face_Features_and_covers(
         shield_idx.extend([a, b, c, a, c, d])
     neck_prims.append({"mat_idx": mat_inner_dark, "positions": shield_pos, "normals": shield_norm, "indices": shield_idx})
 
-    # 2. Left & Right Eye Barrels: opaque dark backing disc at y = -6.00 + smoked translucent black lens at y = -6.48
+    # 2. Left & Right Eye Barrels: opaque dark backing disc at y = -6.02 so the GC9A01 OLED eyes at y = -6.78 sit cleanly in front of the backing disc
     eye_back_pos, eye_back_norm, eye_back_idx = [], [], []
-    eye_glass_pos, eye_glass_norm, eye_glass_idx = [], [], []
     n_eye_seg = 48
-    for cx_eye, tilt_sign in [(-2.528, -1.0), (2.514, 1.0)]:
+    for cx_eye, tilt_sign in [(-2.584, -1.0), (2.571, 1.0)]:
         cz_eye = 16.155
         nx_f = 0.0872 * tilt_sign
         ny_f = -0.9962
         n_gltf = transform_norm_f360_to_gltf(nx_f, ny_f, 0.0)
 
-        # Opaque dark backing disc inside the eye socket
         base_b = len(eye_back_pos)
-        cy_back = -6.00
+        cy_back = -6.02
         eye_back_pos.append(transform_pos_f360_to_gltf(cx_eye, cy_back, cz_eye))
         eye_back_norm.append(n_gltf)
         for k in range(n_eye_seg):
             ang = 2.0 * math.pi * k / n_eye_seg
-            dx = 1.29 * math.cos(ang) * 0.9962
-            dy = -1.29 * math.cos(ang) * 0.0872 * tilt_sign
-            dz = 1.29 * math.sin(ang)
+            dx = 1.25 * math.cos(ang) * 0.9962
+            dy = -1.25 * math.cos(ang) * 0.0872 * tilt_sign
+            dz = 1.25 * math.sin(ang)
             eye_back_pos.append(transform_pos_f360_to_gltf(cx_eye + dx, cy_back + dy, cz_eye + dz))
             eye_back_norm.append(n_gltf)
         for k in range(n_eye_seg):
             k_next = (k + 1) % n_eye_seg
             eye_back_idx.extend([base_b, base_b + 1 + k, base_b + 1 + k_next])
 
-        # Translucent black protective glass cover over the eye barrel opening
-        base_g = len(eye_glass_pos)
-        cy_glass = -6.48
-        eye_glass_pos.append(transform_pos_f360_to_gltf(cx_eye, cy_glass, cz_eye))
-        eye_glass_norm.append(n_gltf)
-        for k in range(n_eye_seg):
-            ang = 2.0 * math.pi * k / n_eye_seg
-            dx = 1.27 * math.cos(ang) * 0.9962
-            dy = -1.27 * math.cos(ang) * 0.0872 * tilt_sign
-            dz = 1.27 * math.sin(ang)
-            eye_glass_pos.append(transform_pos_f360_to_gltf(cx_eye + dx, cy_glass + dy, cz_eye + dz))
-            eye_glass_norm.append(n_gltf)
-        for k in range(n_eye_seg):
-            k_next = (k + 1) % n_eye_seg
-            eye_glass_idx.extend([base_g, base_g + 1 + k, base_g + 1 + k_next])
-
     neck_prims.append({"mat_idx": mat_seam, "positions": eye_back_pos, "normals": eye_back_norm, "indices": eye_back_idx})
-    neck_prims.append({"mat_idx": mat_translucent_black, "positions": eye_glass_pos, "normals": eye_glass_norm, "indices": eye_glass_idx})
 
     # Helper to build a raised cream bezel + recessed black translucent smoked-glass cover on the front face cylinder
     bezel_cream_pos, bezel_cream_norm, bezel_cream_idx = [], [], []
@@ -1303,7 +1284,7 @@ def export_somo_full_assembly():
     # Exact PBR material palette calibrated to somo-v4.png (165d2249.f3d)
     mat_amber = glb.get_or_add_material("SOMO_Amber_Gold", (0.76, 0.51, 0.16, 1.0), metallic=0.12, roughness=0.32)
     mat_cream = glb.get_or_add_material("SOMO_Warm_Cream", (0.88, 0.87, 0.81, 1.0), metallic=0.04, roughness=0.36)
-    mat_tft_screen = glb.get_or_add_material("SOMO_TFT_Charcoal", (0.34, 0.34, 0.32, 1.0), metallic=0.15, roughness=0.28)
+    mat_tft_screen = glb.get_or_add_material("SOMO_TFT_Obsidian", (0.025, 0.028, 0.036, 1.0), metallic=0.18, roughness=0.14)
     mat_seam = glb.get_or_add_material("SOMO_Seam_Dark", (0.14, 0.12, 0.10, 1.0), metallic=0.10, roughness=0.60)
     mat_translucent_black = glb.get_or_add_material("SOMO_Translucent_Black", (0.02, 0.025, 0.035, 0.88), metallic=0.15, roughness=0.12)
     mat_inner_dark = glb.get_or_add_material("SOMO_Inner_Shield", (0.04, 0.04, 0.05, 1.0), metallic=0.10, roughness=0.85)
@@ -1358,10 +1339,60 @@ def export_somo_full_assembly():
         "Panel_Right_Cream",
         combine_bodies_into_primitives(glb, [by_idx[10]], mats_lookup, override_mat_fn=lambda *_: mat_cream),
     )
-    glb.add_node_primitives(
-        "Panel_Back_Cream",
-        combine_bodies_into_primitives(glb, [by_idx[11]], mats_lookup, override_mat_fn=lambda *_: mat_cream),
-    )
+
+    # Cover the circular cable/port opening on Panel_Back_Cream (Body[11] face[7]: x in [-1, 1], y in [13.38, 13.98], z in [1.50, 3.50])
+    # with an opaque dark backing plate + black translucent smoked-glass layer, plus a solid bottom base disc at z = -0.35
+    back_prims = combine_bodies_into_primitives(glb, [by_idx[11]], mats_lookup, override_mat_fn=lambda *_: mat_cream)
+    back_back_pos, back_back_norm, back_back_idx = [], [], []
+    back_glass_pos, back_glass_norm, back_glass_idx = [], [], []
+    n_bk = 40
+    cz_bk = 2.50
+    r_bk = 1.04
+    n_back_gltf = transform_norm_f360_to_gltf(0.0, 1.0, 0.0)
+
+    # Opaque dark backing disc at y = 13.35 + bottom base cap at z = -0.35 (r = 12.6) so no interior is visible from any angle
+    back_back_pos.append(transform_pos_f360_to_gltf(0.0, 13.35, cz_bk))
+    back_back_norm.append(n_back_gltf)
+    for k in range(n_bk):
+        ang = 2.0 * math.pi * k / n_bk
+        px = r_bk * math.cos(ang)
+        pz = cz_bk + r_bk * math.sin(ang)
+        back_back_pos.append(transform_pos_f360_to_gltf(px, 13.35, pz))
+        back_back_norm.append(n_back_gltf)
+    for k in range(n_bk):
+        k_next = (k + 1) % n_bk
+        back_back_idx.extend([0, 1 + k_next, 1 + k])
+
+    # Also add a solid dark bottom base disc at z = -0.34 (r = 12.6 cm)
+    base_bot = len(back_back_pos)
+    n_bot = 64
+    n_bot_gltf = transform_norm_f360_to_gltf(0.0, 0.0, -1.0)
+    back_back_pos.append(transform_pos_f360_to_gltf(0.0, 0.0, -0.34))
+    back_back_norm.append(n_bot_gltf)
+    for k in range(n_bot):
+        ang = 2.0 * math.pi * k / n_bot
+        back_back_pos.append(transform_pos_f360_to_gltf(12.6 * math.cos(ang), 12.6 * math.sin(ang), -0.34))
+        back_back_norm.append(n_bot_gltf)
+    for k in range(n_bot):
+        k_next = (k + 1) % n_bot
+        back_back_idx.extend([base_bot, base_bot + 1 + k_next, base_bot + 1 + k])
+
+    # Black translucent smoked-glass cover lens inside the back port at y = 13.78
+    back_glass_pos.append(transform_pos_f360_to_gltf(0.0, 13.78, cz_bk))
+    back_glass_norm.append(n_back_gltf)
+    for k in range(n_bk):
+        ang = 2.0 * math.pi * k / n_bk
+        px = r_bk * math.cos(ang)
+        pz = cz_bk + r_bk * math.sin(ang)
+        back_glass_pos.append(transform_pos_f360_to_gltf(px, 13.78, pz))
+        back_glass_norm.append(n_back_gltf)
+    for k in range(n_bk):
+        k_next = (k + 1) % n_bk
+        back_glass_idx.extend([0, 1 + k_next, 1 + k])
+
+    back_prims.append({"mat_idx": mat_inner_dark, "positions": back_back_pos, "normals": back_back_norm, "indices": back_back_idx})
+    back_prims.append({"mat_idx": mat_translucent_black, "positions": back_glass_pos, "normals": back_glass_norm, "indices": back_glass_idx})
+    glb.add_node_primitives("Panel_Back_Cream", back_prims)
 
     # 4. Main Amber 4-Arch Body Shell + v24 Upper Torso & White Collar Ring (Light_Ring_Collar)
     body12_prims = combine_bodies_into_primitives(glb, [by_idx[12]], mats_lookup, override_mat_fn=lambda *_: mat_amber)
