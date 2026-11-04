@@ -157,7 +157,7 @@ export const App: React.FC = () => {
                   </form>
                 )}
                 <a className="survey-link" href={`${import.meta.env.BASE_URL}form/`} target="_blank" rel="noopener noreferrer">
-                  Survey
+                  Thoughts?
                 </a>
               </div>
               {submitError && <p className="waitlist-error" role="alert">{submitError}</p>}
