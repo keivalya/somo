@@ -132,33 +132,35 @@ export const App: React.FC = () => {
                 </p>
               </div>
 
-              {submitted ? (
-                <div className="waitlist-confirm" role="status">
-                  <span className="waitlist-confirm-mark" aria-hidden="true">✓</span>
-                  <span className="waitlist-confirm-copy">
-                    <strong>You’re in ✨</strong>
-                  </span>
-                </div>
-              ) : (
-                <form className="waitlist-form" onSubmit={handleWaitlistSubmit}>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Email"
-                    aria-label="Email"
-                    className="waitlist-input"
-                  />
-                  <button type="submit" className="waitlist-button" disabled={submitting}>
-                    {submitting ? 'Joining…' : 'Waitlist'}
-                  </button>
-                </form>
-              )}
+              <div className="signup-actions">
+                {submitted ? (
+                  <div className="waitlist-confirm" role="status">
+                    <span className="waitlist-confirm-mark" aria-hidden="true">✓</span>
+                    <span className="waitlist-confirm-copy">
+                      <strong>You’re in ✨</strong>
+                    </span>
+                  </div>
+                ) : (
+                  <form className="waitlist-form" onSubmit={handleWaitlistSubmit}>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="Email"
+                      aria-label="Email"
+                      className="waitlist-input"
+                    />
+                    <button type="submit" className="waitlist-button" disabled={submitting}>
+                      {submitting ? 'Joining…' : 'Waitlist'}
+                    </button>
+                  </form>
+                )}
+                <a className="survey-link" href={`${import.meta.env.BASE_URL}form/`} target="_blank" rel="noopener noreferrer">
+                  Survey
+                </a>
+              </div>
               {submitError && <p className="waitlist-error" role="alert">{submitError}</p>}
-              <a className="survey-link" href={`${import.meta.env.BASE_URL}form/`} target="_blank" rel="noopener noreferrer">
-                Survey
-              </a>
             </div>
 
             <div className="nexbot-canvas-col">
