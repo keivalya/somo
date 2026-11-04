@@ -269,6 +269,35 @@ body,
   transform: scale(0.98);
 }
 
+.survey-link {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 42px;
+  padding: 0.55rem 1rem;
+  border: 1px solid rgba(245, 166, 35, 0.35);
+  border-radius: 999px;
+  background: rgba(245, 166, 35, 0.08);
+  color: #fcd38b;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background-color 0.18s ease, border-color 0.18s ease;
+}
+
+.survey-link:hover,
+.survey-link:focus-visible {
+  background: rgba(245, 166, 35, 0.16);
+  border-color: rgba(245, 166, 35, 0.7);
+}
+
+.survey-link:focus-visible {
+  outline: 2px solid #fcd38b;
+  outline-offset: 3px;
+}
+
 .waitlist-confirm {
   pointer-events: auto;
   display: inline-flex;

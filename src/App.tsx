@@ -156,6 +156,9 @@ export const App: React.FC = () => {
                 </form>
               )}
               {submitError && <p className="waitlist-error" role="alert">{submitError}</p>}
+              <a className="survey-link" href={`${import.meta.env.BASE_URL}form/`} target="_blank" rel="noopener noreferrer">
+                Survey
+              </a>
             </div>
 
             <div className="nexbot-canvas-col">
