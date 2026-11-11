@@ -136,7 +136,7 @@ export function useIroMood({ focused, typing, submitted }: { focused: boolean; t
   // leaning in (shy) once you type, softly glowing gold after you've joined.
   const base: Mood = asleep
     ? { emotion: 'sleepy', presence: 'rest' }
-    : focused
+    : focused && !submitted // the form unmounts on success without a blur event
       ? { emotion: typing ? 'shy' : 'comfort', presence: 'listening' }
       : { emotion: 'comfort', presence: submitted ? 'happy' : 'rest' };
 
