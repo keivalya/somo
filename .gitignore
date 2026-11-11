@@ -7,3 +7,6 @@ __pycache__/
 *.pyc
 .env
 .env.*
+
+# Master film (frames are exported to public/story by scripts/build_scroll_frames.sh)
+video/

@@ -336,6 +336,7 @@ interface IroRobotModelProps {
   emotion: IroEmotion;
   presence: PresenceState;
   onCycleEmotion: () => void;
+  active?: boolean;
 }
 
 const GLB_URL = `${import.meta.env.BASE_URL}models/somo-assembly.glb?v=33`;
@@ -638,13 +639,15 @@ interface SomoHeroCanvasProps {
   emotion: IroEmotion;
   presence: PresenceState;
   onCycleEmotion: () => void;
+  active?: boolean;
 }
 
-export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, presence, onCycleEmotion }) => {
+export const SomoHeroCanvas: React.FC<SomoHeroCanvasProps> = ({ emotion, presence, onCycleEmotion, active = true }) => {
   return (
     <div className="hero-3d-canvas-wrap">
       <Canvas
         shadows
+        frameloop={active ? 'always' : 'never'}
         dpr={[1, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
       >
