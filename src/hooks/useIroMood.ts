@@ -17,21 +17,71 @@ const AWAY_FOR_GREETING_MS = 4000;
 
 const CLICK_CYCLE: IroEmotion[] = ['shy', 'surprised', 'thinking', 'confused', 'joy', 'comfort'];
 
+// iro remembers visitors on their own device only: when they last came and whether they
+// joined. No email or identifier is stored, and nothing leaves the browser.
+const MEMORY_KEY = 'iro:memory:v1';
+const NEW_VISIT_GAP_MS = 30 * 60 * 1000; // a reload within this is the same visit
+const LONG_AWAY_MS = 14 * 24 * 60 * 60 * 1000;
+const RETURN_NAP_MS = 800;
+
+interface Memory {
+  lastSeen: number;
+  joined: boolean;
+}
+
+function readMemory(): Memory | null {
+  try {
+    const raw = window.localStorage.getItem(MEMORY_KEY);
+    const m = raw ? JSON.parse(raw) : null;
+    return m && typeof m.lastSeen === 'number' ? { lastSeen: m.lastSeen, joined: m.joined === true } : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeMemory(update: Partial<Memory>) {
+  try {
+    const next = { lastSeen: Date.now(), joined: false, ...readMemory(), ...update };
+    window.localStorage.setItem(MEMORY_KEY, JSON.stringify(next));
+  } catch {
+    // Storage blocked (private mode, settings): iro just treats everyone as new.
+  }
+}
+
+interface Recognition {
+  joined: boolean; // joined the waitlist on an earlier visit
+  returning: boolean; // came back after a real gap (not a reload)
+  longAway: boolean;
+}
+
+function recognize(): Recognition {
+  const m = readMemory();
+  const away = m ? Date.now() - m.lastSeen : 0;
+  return { joined: Boolean(m?.joined), returning: Boolean(m) && away > NEW_VISIT_GAP_MS, longAway: away > LONG_AWAY_MS };
+}
+
+// Where the email field is relative to iro: beside it on wide screens, above it on phones.
+const glanceAtSignup = (): IroEmotion =>
+  window.matchMedia('(max-width: 960px), (max-aspect-ratio: 1/1)').matches ? 'glanceUp' : 'glanceLeft';
+
 /**
  * iro reacts to the visitor: dozes on arrival and wakes up, falls asleep when left alone,
  * startles awake on movement, leans in while you type, thinks while your signup is sent,
- * and is overjoyed when you're in.
+ * and is overjoyed when you're in. It also remembers you between visits (see recognize()).
  */
 export function useIroMood({ focused, typing, submitted }: { focused: boolean; typing: boolean; submitted: boolean }) {
-  const [asleep, setAsleep] = useState(true);
+  const [memory] = useState(recognize);
+  // Someone who already joined is never met with a nap: iro is up and waiting for them.
+  const [asleep, setAsleep] = useState(!memory.joined);
   const [beat, setBeat] = useState<Mood | null>(null);
   const [holding, setHolding] = useState<Mood | null>(null); // held until released (e.g. while submitting)
   const timers = useRef<number[]>([]);
-  const asleepRef = useRef(true);
+  const asleepRef = useRef(!memory.joined);
   const readyAt = useRef<number | null>(null);
   const lastActivity = useRef(Date.now());
   const hiddenAt = useRef<number | null>(null);
   const cycle = useRef(0);
+  const arrivalGreeting = useRef<Beat[] | null>(null); // used by whichever wake comes first
   const focusedRef = useRef(focused);
   focusedRef.current = focused;
 
@@ -56,17 +106,35 @@ export function useIroMood({ focused, typing, submitted }: { focused: boolean; t
       if (!asleepRef.current) return;
       asleepRef.current = false;
       setAsleep(false);
-      play(greeting);
+      play(arrivalGreeting.current ?? greeting);
+      arrivalGreeting.current = null;
     },
     [play],
   );
 
-  // Arrival: iro is dozing when the model first appears, then wakes up to meet you.
+  // Arrival. A first visit: iro is dozing and wakes up to meet you. A return visit: it
+  // recognizes you (and, if you haven't joined yet, glances shyly at the email field).
+  // Someone who joined: no nap, just a happy welcome back.
   useEffect(() => {
+    writeMemory({ lastSeen: Date.now() });
     let napTimer = 0;
     const onReady = () => {
       readyAt.current = performance.now();
-      napTimer = window.setTimeout(() => wake(), ARRIVAL_NAP_MS);
+      const { joined, returning, longAway } = memory;
+      const startle: Beat = { emotion: 'surprised', presence: 'listening', ms: longAway ? 700 : 450 };
+      const delight: Beat = { emotion: 'joy', presence: 'happy', ms: longAway ? 2600 : 2000 };
+      const glance: Beat[] = [
+        { emotion: 'comfort', presence: 'rest', ms: 600 },
+        { emotion: glanceAtSignup(), presence: 'rest', ms: 1300 },
+      ];
+      if (joined) {
+        if (returning) play(longAway ? [startle, delight] : [delight]);
+      } else if (returning) {
+        arrivalGreeting.current = longAway ? [startle, { ...delight, ms: 1500 }, ...glance] : [startle, ...glance];
+        napTimer = window.setTimeout(() => wake(), RETURN_NAP_MS);
+      } else {
+        napTimer = window.setTimeout(() => wake(), ARRIVAL_NAP_MS);
+      }
     };
     if ((window as Window & { __iroModelReady?: boolean }).__iroModelReady) onReady();
     else window.addEventListener('iro:model-ready', onReady, { once: true });
@@ -74,7 +142,7 @@ export function useIroMood({ focused, typing, submitted }: { focused: boolean; t
       window.removeEventListener('iro:model-ready', onReady);
       clearTimeout(napTimer);
     };
-  }, [wake]);
+  }, [memory, play, wake]);
 
   // Activity wakes it; being left alone lets it doze off.
   useEffect(() => {
@@ -117,6 +185,7 @@ export function useIroMood({ focused, typing, submitted }: { focused: boolean; t
 
   const onSubmitStart = useCallback(() => setHolding({ emotion: 'thinking', presence: 'thinking' }), []);
   const onSubmitSuccess = useCallback(() => {
+    writeMemory({ joined: true });
     setHolding(null);
     play([{ emotion: 'joy', presence: 'happy', ms: 3200 }]);
   }, [play]);
@@ -138,7 +207,7 @@ export function useIroMood({ focused, typing, submitted }: { focused: boolean; t
     ? { emotion: 'sleepy', presence: 'rest' }
     : focused && !submitted // the form unmounts on success without a blur event
       ? { emotion: typing ? 'shy' : 'comfort', presence: 'listening' }
-      : { emotion: 'comfort', presence: submitted ? 'happy' : 'rest' };
+      : { emotion: 'comfort', presence: submitted || memory.joined ? 'happy' : 'rest' };
 
   const mood = holding ?? (asleep ? base : beat ?? base);
   return { mood, onSubmitStart, onSubmitSuccess, onSubmitError, onPoke };

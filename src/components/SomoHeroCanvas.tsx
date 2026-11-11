@@ -12,7 +12,17 @@ import {
 import * as THREE from 'three';
 import { PresenceLight, PresenceState } from './PresenceLight';
 
-export type IroEmotion = 'comfort' | 'shy' | 'surprised' | 'thinking' | 'confused' | 'angry' | 'sleepy' | 'joy';
+export type IroEmotion =
+  | 'comfort'
+  | 'shy'
+  | 'surprised'
+  | 'thinking'
+  | 'confused'
+  | 'angry'
+  | 'sleepy'
+  | 'joy'
+  | 'glanceLeft'
+  | 'glanceUp';
 
 interface EyeTargetParams {
   cx: number;
@@ -221,6 +231,60 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
       bottomArchOffset: 175,
       blush: 0,
       brightness: 0.68,
+    },
+  },
+  // A shy sideways look toward the email field (left of iro on wide screens).
+  glanceLeft: {
+    headLift: 5.6,
+    headPitch: 0.02,
+    headYaw: -0.34,
+    headRoll: 0.05,
+    left: {
+      cx: -30,
+      cy: 2,
+      r: 72,
+      topClipOffset: -86,
+      topClipAngle: 0,
+      bottomArchOffset: 102,
+      blush: 0.35,
+      brightness: 1.0,
+    },
+    right: {
+      cx: -30,
+      cy: 2,
+      r: 72,
+      topClipOffset: -86,
+      topClipAngle: 0,
+      bottomArchOffset: 102,
+      blush: 0.35,
+      brightness: 1.0,
+    },
+  },
+  // The same look upward, where the email field sits on phones.
+  glanceUp: {
+    headLift: 5.8,
+    headPitch: -0.24,
+    headYaw: -0.04,
+    headRoll: 0.03,
+    left: {
+      cx: -4,
+      cy: -36,
+      r: 72,
+      topClipOffset: -86,
+      topClipAngle: 0,
+      bottomArchOffset: 102,
+      blush: 0.35,
+      brightness: 1.0,
+    },
+    right: {
+      cx: -4,
+      cy: -36,
+      r: 72,
+      topClipOffset: -86,
+      topClipAngle: 0,
+      bottomArchOffset: 102,
+      blush: 0.35,
+      brightness: 1.0,
     },
   },
   // Upturned crescent eyes (^ ^) with a little blush, head raised.
