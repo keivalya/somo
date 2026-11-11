@@ -414,6 +414,12 @@ const SpringCameraReturn: React.FC = () => {
 const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, presence, onCycleEmotion }) => {
   const gltf = useGLTF(GLB_URL);
   const { size } = useThree();
+
+  // Tell the scroll story it can start fetching frames now that the hero is ready.
+  useEffect(() => {
+    (window as Window & { __iroModelReady?: boolean }).__iroModelReady = true;
+    window.dispatchEvent(new Event('iro:model-ready'));
+  }, []);
   const isStacked = size.width < 900 || size.height > size.width;
   const aspect = size.width / Math.max(1, size.height);
   const responsiveFactor = Math.min(1, aspect / 0.82);

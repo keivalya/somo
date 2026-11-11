@@ -56,25 +56,49 @@ export const ScrollStory: React.FC = () => {
     const images = CHAPTERS.map((c) => new Array<HTMLImageElement | null>(c.frames).fill(null));
     const requested = CHAPTERS.map(() => false);
     const pending: HTMLImageElement[] = [];
+    const queue: [number, number][] = [];
+    const MAX_IN_FLIGHT = 6;
+    let inFlight = 0;
+    let disposed = false;
     let raf = 0;
     let lastKey = '';
     let visible = false;
+    // Hold frame downloads until the hero model is ready (or the visitor starts scrolling),
+    // so the 3D model never competes with hundreds of image requests on first load.
+    let allowed = Boolean((window as Window & { __iroModelReady?: boolean }).__iroModelReady);
+
+    const pump = () => {
+      while (allowed && !disposed && inFlight < MAX_IN_FLIGHT && queue.length) {
+        const [ci, i] = queue.shift()!;
+        const img = new Image() as HTMLImageElement & { fetchPriority?: string };
+        img.decoding = 'async';
+        img.fetchPriority = 'low';
+        img.onload = img.onerror = () => {
+          inFlight--;
+          if (img.naturalWidth) {
+            images[ci][i] = img;
+            lastKey = '';
+            schedule();
+          }
+          pump();
+        };
+        inFlight++;
+        img.src = frameUrl(CHAPTERS[ci].id, size, i);
+        pending.push(img);
+      }
+    };
+
+    const allow = () => {
+      if (allowed) return;
+      allowed = true;
+      pump();
+    };
 
     const loadChapter = (ci: number) => {
       if (ci < 0 || ci >= CHAPTERS.length || requested[ci]) return;
       requested[ci] = true;
-      const chapter = CHAPTERS[ci];
-      loadOrder(chapter.frames).forEach((i) => {
-        const img = new Image();
-        img.decoding = 'async';
-        img.onload = () => {
-          images[ci][i] = img;
-          lastKey = '';
-          schedule();
-        };
-        img.src = frameUrl(chapter.id, size, i);
-        pending.push(img);
-      });
+      loadOrder(CHAPTERS[ci].frames).forEach((i) => queue.push([ci, i]));
+      pump();
     };
 
     const nearest = (ci: number, target: number) => {
@@ -177,15 +201,20 @@ export const ScrollStory: React.FC = () => {
     };
     resize();
     window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('scroll', allow, { passive: true, once: true });
+    window.addEventListener('iro:model-ready', allow, { once: true });
     window.addEventListener('resize', onResize);
 
     return () => {
+      disposed = true;
       preload.disconnect();
       onScreen.disconnect();
       window.removeEventListener('scroll', schedule);
+      window.removeEventListener('scroll', allow);
+      window.removeEventListener('iro:model-ready', allow);
       window.removeEventListener('resize', onResize);
       if (raf) cancelAnimationFrame(raf);
-      pending.forEach((img) => (img.onload = null));
+      pending.forEach((img) => (img.onload = img.onerror = null));
     };
   }, []);
 
