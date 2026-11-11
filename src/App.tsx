@@ -1,24 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ScrollStory } from './components/ScrollStory';
 import { SomoHeroCanvas } from './components/SomoHeroCanvas';
+import { useIroMood } from './hooks/useIroMood';
 
 const WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIYyQj6gEzVm5s4l1Sp3_MdsUtCXuY5ME-6_st3cQpJ5qxa4t2nyUxwmdk0gwT_IU1/exec';
 
-const PRESENCE_STATES = [
-  { id: 'rest', emotion: 'comfort', duration: 0 },
-  { id: 'listening', emotion: 'surprised', duration: 5000 },
-  { id: 'thinking', emotion: 'thinking', duration: 6000 },
-  { id: 'happy', emotion: 'shy', duration: 3000 },
-] as const;
-
 export const App: React.FC = () => {
-  const [presenceIndex, setPresenceIndex] = useState(0);
-  const presence = PRESENCE_STATES[presenceIndex];
   const [mouseSpotlight, setMouseSpotlight] = useState({ x: 68, y: 38 });
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const { mood, onSubmitStart, onSubmitSuccess, onSubmitError, onPoke } = useIroMood({
+    focused: emailFocused,
+    typing: email.trim().length > 0,
+    submitted,
+  });
   const heroRef = useRef<HTMLElement>(null);
   const [heroVisible, setHeroVisible] = useState(true);
 
@@ -31,24 +29,11 @@ export const App: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  // Stay at rest until an interaction starts the listening → thinking → happy sequence.
-  useEffect(() => {
-    if (presence.id === 'rest') return;
-    const timer = window.setTimeout(() => {
-      setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
-    }, presence.duration);
-    return () => window.clearTimeout(timer);
-  }, [presenceIndex, presence]);
-
   const handleStageMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
     setMouseSpotlight({ x, y });
-  };
-
-  const handleCycleEmotion = () => {
-    setPresenceIndex((index) => (index + 1) % PRESENCE_STATES.length);
   };
 
   const handleWaitlistSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -58,6 +43,7 @@ export const App: React.FC = () => {
 
     setSubmitting(true);
     setSubmitError('');
+    onSubmitStart();
     try {
       const body = new URLSearchParams({ email: normalizedEmail });
       const response = await fetch(WAITLIST_ENDPOINT, {
@@ -71,10 +57,11 @@ export const App: React.FC = () => {
       if (!response.ok || (await response.text()).trim() !== 'OK') {
         throw new Error('Waitlist submission was not confirmed');
       }
-      setPresenceIndex(3);
+      onSubmitSuccess();
       setSubmitted(true);
       setEmail('');
     } catch {
+      onSubmitError();
       setSubmitError('Couldn’t confirm your signup. Please try again later.');
     } finally {
       setSubmitting(false);
@@ -98,6 +85,8 @@ export const App: React.FC = () => {
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onFocus={() => setEmailFocused(true)}
+            onBlur={() => setEmailFocused(false)}
             placeholder="Email"
             aria-label="Email"
             className="waitlist-input"
@@ -186,9 +175,9 @@ export const App: React.FC = () => {
               <div className="nexbot-canvas-col">
                 <SomoHeroCanvas
                   active={heroVisible}
-                  emotion={presence.emotion}
-                  presence={presence.id}
-                  onCycleEmotion={handleCycleEmotion}
+                  emotion={mood.emotion}
+                  presence={mood.presence}
+                  onCycleEmotion={onPoke}
                 />
               </div>
             </div>

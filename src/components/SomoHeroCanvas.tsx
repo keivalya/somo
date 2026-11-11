@@ -12,7 +12,7 @@ import {
 import * as THREE from 'three';
 import { PresenceLight, PresenceState } from './PresenceLight';
 
-export type IroEmotion = 'comfort' | 'shy' | 'surprised' | 'thinking' | 'confused' | 'angry';
+export type IroEmotion = 'comfort' | 'shy' | 'surprised' | 'thinking' | 'confused' | 'angry' | 'sleepy' | 'joy';
 
 interface EyeTargetParams {
   cx: number;
@@ -193,6 +193,60 @@ const EMOTION_PRESETS: Record<IroEmotion, EmotionPreset> = {
       topClipAngle: -0.45,
       bottomArchOffset: 175,
       blush: 0,
+      brightness: 1.0,
+    },
+  },
+  // Heavy lids, dimmed eyes, head slumped on a lowered actuator.
+  sleepy: {
+    headLift: 4.6,
+    headPitch: 0.17,
+    headYaw: 0.0,
+    headRoll: 0.05,
+    left: {
+      cx: 0,
+      cy: 10,
+      r: 70,
+      topClipOffset: 16,
+      topClipAngle: 0,
+      bottomArchOffset: 175,
+      blush: 0,
+      brightness: 0.68,
+    },
+    right: {
+      cx: 0,
+      cy: 10,
+      r: 70,
+      topClipOffset: 16,
+      topClipAngle: 0,
+      bottomArchOffset: 175,
+      blush: 0,
+      brightness: 0.68,
+    },
+  },
+  // Upturned crescent eyes (^ ^) with a little blush, head raised.
+  joy: {
+    headLift: 6.0,
+    headPitch: -0.08,
+    headYaw: 0.0,
+    headRoll: -0.03,
+    left: {
+      cx: 0,
+      cy: -8,
+      r: 80,
+      topClipOffset: -94,
+      topClipAngle: 0,
+      bottomArchOffset: 60,
+      blush: 0.85,
+      brightness: 1.0,
+    },
+    right: {
+      cx: 0,
+      cy: -8,
+      r: 80,
+      topClipOffset: -94,
+      topClipAngle: 0,
+      bottomArchOffset: 60,
+      blush: 0.85,
       brightness: 1.0,
     },
   },
@@ -512,14 +566,24 @@ const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, presence, onCycl
     return list;
   }, [gltf]);
 
-  useFrame(({ pointer, clock }, delta) => {
-    const damp = Math.min(1, delta * 7.5);
+  useFrame(({ pointer: rawPointer, clock }, delta) => {
+    // Asleep iro settles slowly and barely follows the cursor.
+    const asleep = emotion === 'sleepy';
+    const damp = Math.min(1, delta * (asleep ? 2.2 : 7.5));
     const preset = EMOTION_PRESETS[emotion];
     const t = clock.getElapsedTime();
+    const follow = asleep ? 0.12 : 1;
+    const pointer = { x: rawPointer.x * follow, y: rawPointer.y * follow };
 
     // 1. Smoothly animate linear-actuator head lift + expressive head tilt & cursor tracking
     if (headLiftRef.current) {
-      const breathingBob = Math.sin(t * 2.1) * 0.08;
+      // Sleep breathes slower and deeper; joy bounces.
+      const breathingBob =
+        emotion === 'sleepy'
+          ? Math.sin(t * 1.1) * 0.12
+          : emotion === 'joy'
+            ? Math.abs(Math.sin(t * 6.5)) * 0.32
+            : Math.sin(t * 2.1) * 0.08;
       const targetLift = preset.headLift + breathingBob;
       headLiftRef.current.position.y = THREE.MathUtils.lerp(
         headLiftRef.current.position.y,
@@ -563,7 +627,7 @@ const IroRobotModel: React.FC<IroRobotModelProps> = ({ emotion, presence, onCycl
     // 3. Natural periodic blink
     const bt = blinkTimerRef.current;
     let blinkClose = 0;
-    if (!bt.isBlinking && t >= bt.nextBlinkAt) {
+    if (!bt.isBlinking && !asleep && t >= bt.nextBlinkAt) {
       bt.isBlinking = true;
       bt.blinkProgress = 0;
     }
