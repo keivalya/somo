@@ -1,12 +1,47 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { MotionConfig, motion, useMotionTemplate, useMotionValue, useReducedMotion, useSpring } from 'motion/react';
 import { ScrollStory } from './components/ScrollStory';
 import { SomoHeroCanvas } from './components/SomoHeroCanvas';
+import { WaitlistSignup } from './components/WaitlistSignup';
 import { useIroMood } from './hooks/useIroMood';
 
 const WAITLIST_ENDPOINT = 'https://script.google.com/macros/s/AKfycbzIYyQj6gEzVm5s4l1Sp3_MdsUtCXuY5ME-6_st3cQpJ5qxa4t2nyUxwmdk0gwT_IU1/exec';
 
+// Dev only: `?mock=ok` or `?mock=error` fakes the waitlist call, so the signup states
+// can be tried locally without writing test emails to the real sheet.
+const MOCK_WAITLIST = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('mock') : null;
+
+const postToWaitlist = async (email: string) => {
+  if (MOCK_WAITLIST) {
+    await new Promise((resolve) => setTimeout(resolve, 900));
+    if (MOCK_WAITLIST === 'error') throw new Error('Mock waitlist failure');
+    return;
+  }
+  const response = await fetch(WAITLIST_ENDPOINT, {
+    method: 'POST',
+    mode: 'cors',
+    credentials: 'omit',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
+    body: new URLSearchParams({ email }),
+  });
+  // Confirm persistence only when the script explicitly reports success.
+  if (!response.ok || (await response.text()).trim() !== 'OK') {
+    throw new Error('Waitlist submission was not confirmed');
+  }
+};
+
+const SPOT_SPRING = { stiffness: 90, damping: 22, mass: 0.6 };
+
 export const App: React.FC = () => {
-  const [mouseSpotlight, setMouseSpotlight] = useState({ x: 68, y: 38 });
+  // The spotlight follows the cursor through motion values: no React re-render per mousemove,
+  // and a spring gives the light a little weight as it trails behind.
+  const reduceMotion = useReducedMotion();
+  const spotX = useMotionValue(68);
+  const spotY = useMotionValue(38);
+  const springX = useSpring(spotX, SPOT_SPRING);
+  const springY = useSpring(spotY, SPOT_SPRING);
+  const spotXCss = useMotionTemplate`${reduceMotion ? spotX : springX}%`;
+  const spotYCss = useMotionTemplate`${reduceMotion ? spotY : springY}%`;
   const [email, setEmail] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -31,9 +66,8 @@ export const App: React.FC = () => {
 
   const handleStageMouseMove = (e: React.MouseEvent<HTMLElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setMouseSpotlight({ x, y });
+    spotX.set(((e.clientX - rect.left) / rect.width) * 100);
+    spotY.set(((e.clientY - rect.top) / rect.height) * 100);
   };
 
   const handleWaitlistSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -45,18 +79,7 @@ export const App: React.FC = () => {
     setSubmitError('');
     onSubmitStart();
     try {
-      const body = new URLSearchParams({ email: normalizedEmail });
-      const response = await fetch(WAITLIST_ENDPOINT, {
-        method: 'POST',
-        mode: 'cors',
-        credentials: 'omit',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' },
-        body,
-      });
-      // Confirm persistence only when the script explicitly reports success.
-      if (!response.ok || (await response.text()).trim() !== 'OK') {
-        throw new Error('Waitlist submission was not confirmed');
-      }
+      await postToWaitlist(normalizedEmail);
       onSubmitSuccess();
       setSubmitted(true);
       setEmail('');
@@ -68,56 +91,28 @@ export const App: React.FC = () => {
     }
   };
 
-  const signup = (
-    <>
-    <div className="signup-actions">
-      {submitted ? (
-        <div className="waitlist-confirm" role="status">
-          <span className="waitlist-confirm-mark" aria-hidden="true">✓</span>
-          <span className="waitlist-confirm-copy">
-            <strong>You’re in ✨</strong>
-          </span>
-        </div>
-      ) : (
-        <form className="waitlist-form" onSubmit={handleWaitlistSubmit}>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onFocus={() => setEmailFocused(true)}
-            onBlur={() => setEmailFocused(false)}
-            placeholder="Email"
-            aria-label="Email"
-            className="waitlist-input"
-          />
-          <button type="submit" className="waitlist-button" disabled={submitting}>
-            {submitting ? 'Joining…' : 'Waitlist'}
-          </button>
-        </form>
-      )}
-      <a className="survey-link" href={`${import.meta.env.BASE_URL}form/`} target="_blank" rel="noopener noreferrer">
-        Thoughts?
-      </a>
-    </div>
-    {submitError && <p className="waitlist-error" role="alert">{submitError}</p>}
-    </>
+  const signup = (id: string) => (
+    <WaitlistSignup
+      id={id}
+      email={email}
+      submitted={submitted}
+      submitting={submitting}
+      submitError={submitError}
+      onEmailChange={setEmail}
+      onFocusChange={setEmailFocused}
+      onSubmit={handleWaitlistSubmit}
+    />
   );
 
   return (
-    <>
+    <MotionConfig reducedMotion="user">
       <div className="somo-minimal-shell">
         <main className="somo-stage-wrap">
-          <section
+          <motion.section
             ref={heroRef}
             className="nexbot-stage-card"
             onMouseMove={handleStageMouseMove}
-            style={
-              {
-                '--spot-x': `${mouseSpotlight.x}%`,
-                '--spot-y': `${mouseSpotlight.y}%`,
-              } as React.CSSProperties
-            }
+            style={{ '--spot-x': spotXCss, '--spot-y': spotYCss } as React.ComponentProps<typeof motion.section>['style']}
           >
             {/* Minimal Brand Lockup */}
             <header className="nexbot-minimal-header">
@@ -169,7 +164,7 @@ export const App: React.FC = () => {
                   </p>
                 </div>
 
-                {signup}
+                {signup('hero')}
               </div>
 
               <div className="nexbot-canvas-col">
@@ -182,7 +177,7 @@ export const App: React.FC = () => {
               </div>
             </div>
             <span className="scroll-cue" aria-hidden="true" />
-          </section>
+          </motion.section>
         </main>
       </div>
 
@@ -190,8 +185,8 @@ export const App: React.FC = () => {
 
       <section className="story-end">
         <h2 className="nexbot-headline">iro</h2>
-        {signup}
+        {signup('end')}
       </section>
-    </>
+    </MotionConfig>
   );
 };
