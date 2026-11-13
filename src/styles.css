@@ -166,6 +166,13 @@ html {
   pointer-events: none;
 }
 
+.hero-signup {
+  display: flex;
+  flex-direction: column;
+  align-items: inherit;
+  width: 100%;
+}
+
 .nexbot-title-block {
   display: flex;
   flex-direction: column;
@@ -509,6 +516,14 @@ html {
 /* ==========================================================================
    Scroll Story (canvas frame sequences scrubbed by scroll)
    ========================================================================== */
+/* Fades the cue in after the hero copy; the cue keeps positioning against the stage. */
+.scroll-cue-wrap {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+}
+
 .scroll-cue {
   position: absolute;
   left: 50%;
