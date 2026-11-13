@@ -606,6 +606,12 @@ html {
   will-change: opacity, transform;
 }
 
+/* Words reveal one by one as the story scrolls (see ScrollStory). */
+.story-word {
+  display: inline-block;
+  will-change: opacity, transform, filter;
+}
+
 .story-end {
   height: 100vh;
   height: 100dvh;

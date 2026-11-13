@@ -21,6 +21,16 @@ const smooth = (v: number) => v * v * (3 - 2 * v);
 const window4 = (p: number, a: number, b: number, c: number, d: number) =>
   smooth(clamp((p - a) / (b - a))) * (1 - smooth(clamp((p - c) / (d - c))));
 
+// Line reveal, in chapter-local progress: words arrive one after another over [IN_START, IN_END],
+// then the whole line leaves together over [OUT_START, OUT_END].
+const IN_START = 0.12;
+const IN_END = 0.38;
+const WORD_IN = 0.12; // share of the chapter each word takes to arrive
+const OUT_START = 0.74;
+const OUT_END = 0.9;
+
+const LINE_WORDS = CHAPTERS.map((c) => c.line.split(' '));
+
 const frameUrl = (id: string, size: 'lg' | 'sm', i: number) =>
   `${import.meta.env.BASE_URL}story/${id}/${size}/${String(i + 1).padStart(4, '0')}.webp`;
 
@@ -44,6 +54,7 @@ export const ScrollStory: React.FC = () => {
   const rootRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const wordRefs = useRef<(HTMLSpanElement | null)[][]>(CHAPTERS.map(() => []));
 
   useEffect(() => {
     const root = rootRef.current;
@@ -157,11 +168,27 @@ export const ScrollStory: React.FC = () => {
       root.style.setProperty('--zoom', reduceMotion ? '1' : (1 + local * 0.06).toFixed(4));
 
       CHAPTERS.forEach((_, i) => {
-        const el = lineRefs.current[i];
-        if (!el) return;
-        const o = i === ci ? window4(local, 0.16, 0.32, 0.74, 0.9) : 0;
-        el.style.opacity = o.toFixed(3);
-        el.style.transform = `translateY(${((1 - o) * 16).toFixed(1)}px)`;
+        const line = lineRefs.current[i];
+        if (!line) return;
+        const active = i === ci && local > IN_START && local < OUT_END;
+        line.style.visibility = active ? 'visible' : 'hidden';
+        if (!active) return;
+
+        // The line drifts up slightly as it leaves; each word rises out of a blur as it arrives.
+        const out = smooth(clamp((local - OUT_START) / (OUT_END - OUT_START)));
+        line.style.opacity = (1 - out).toFixed(3);
+        line.style.transform = reduceMotion ? '' : `translateY(${(-out * 10).toFixed(1)}px)`;
+
+        const words = wordRefs.current[i];
+        const step = words.length > 1 ? (IN_END - IN_START - WORD_IN) / (words.length - 1) : 0;
+        words.forEach((word, k) => {
+          if (!word) return;
+          const p = smooth(clamp((local - IN_START - k * step) / WORD_IN));
+          word.style.opacity = p.toFixed(3);
+          if (reduceMotion) return;
+          word.style.transform = `translateY(${((1 - p) * 18).toFixed(1)}px)`;
+          word.style.filter = p > 0.99 ? '' : `blur(${((1 - p) * 10).toFixed(1)}px)`;
+        });
       });
 
       const frame = Math.round(local * (chapter.frames - 1));
@@ -231,7 +258,19 @@ export const ScrollStory: React.FC = () => {
               }}
               className="story-line"
             >
-              {c.line}
+              {LINE_WORDS[i].map((word, k) => (
+                <React.Fragment key={k}>
+                  {k > 0 && ' '}
+                  <span
+                    ref={(el) => {
+                      wordRefs.current[i][k] = el;
+                    }}
+                    className="story-word"
+                  >
+                    {word}
+                  </span>
+                </React.Fragment>
+              ))}
             </p>
           ))}
         </div>
