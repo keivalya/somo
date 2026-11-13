@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from 'react';
+import { useStorySnap } from '../hooks/useStorySnap';
 
 // Frame sequences are produced by scripts/build_scroll_frames.sh.
 const CHAPTERS = [
@@ -55,6 +56,9 @@ export const ScrollStory: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const wordRefs = useRef<(HTMLSpanElement | null)[][]>(CHAPTERS.map(() => []));
+
+  // Glide to the next fully readable line when scrolling stops mid-reveal.
+  useStorySnap(rootRef, { weights: WEIGHTS, restStart: IN_END, restEnd: OUT_START });
 
   useEffect(() => {
     const root = rootRef.current;
